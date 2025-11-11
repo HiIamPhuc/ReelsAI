@@ -1,0 +1,1 @@
+# A module used to extract knowledge from a summarized text. The constructed KG will be processed with video metadata afterwards.

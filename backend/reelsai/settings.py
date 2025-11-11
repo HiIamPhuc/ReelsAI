@@ -97,6 +97,7 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', 'reelsai'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
+        "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")}
     }
 }
 
@@ -202,3 +203,5 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Memoria")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

@@ -8,18 +8,23 @@ from dotenv import load_dotenv
 import os
 
 
+
+
 # Load biến môi trường từ file .env
 load_dotenv()
+
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
 class GetTopHashtagsView(APIView):
     """
     Get top hashtags based on views and country.
     """
+
 
     @extend_schema(
         tags=["Hashtags"],
@@ -38,22 +43,27 @@ class GetTopHashtagsView(APIView):
             if not industry_id:
                 return JsonResponse({"error": "industry_id is required"}, status=400)
 
+
             # Fetch hashtags from Supabase
             response = supabase.table("HASHTAGS").select("*").eq("industry_id", industry_id).execute()
             hashtags = response.data
+
 
             # Filter hashtags by country
             vietnam_hashtags = [h for h in hashtags if h['country_id'] == 'VN']
             us_hashtags = [h for h in hashtags if h['country_id'] == 'US']
             uk_hashtags = [h for h in hashtags if h['country_id'] == 'UK']
 
+
             # Sort by views (descending) and limit results
             vietnam_hashtags = sorted(vietnam_hashtags, key=lambda x: x['views'], reverse=True)[:10]
             us_hashtags = sorted(us_hashtags, key=lambda x: x['views'], reverse=True)[:10]
             uk_hashtags = sorted(uk_hashtags, key=lambda x: x['views'], reverse=True)[:10]
 
+
             # Combine results
             top_hashtags = vietnam_hashtags + us_hashtags + uk_hashtags
+
 
             return JsonResponse(top_hashtags, safe=False)
         except Exception as e:

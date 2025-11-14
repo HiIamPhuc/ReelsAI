@@ -92,13 +92,14 @@ WSGI_APPLICATION = "reelsai.wsgi.application"
 # }
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": os.getenv("DB_NAME", "reelsai"),
-        "USER": os.getenv("DB_USER", "reelsai"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "reelsai"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.getenv('DB_NAME', 'reelsai'),
+        'USER': os.getenv('DB_USER', 'reelsai'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'reelsai'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")}
     }
 }
 
@@ -204,38 +205,4 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Memoria")
 
-
-# Video Storage Configurations
-"""
-For testing local only, video will be saved at
-    1. MEDIA_URL = '/media/'
-    2. MEDIA_ROOT = BASE_DIR / 'media' 
-    Example path: http://127.0.0.1:8000/media/videos/filename.mp4
-
-For naver storage, video will be set up with 
-
-from storages.backends.s3boto3 import S3Boto3Storage
-from django.conf import settings
-
-
-class MediaStorage(S3Boto3Storage):
-    bucket_name = settings.NAVER_STORAGE_BUCKET_NAME
-    location = 'media'
-    default_acl = 'public-read'
-    file_overwrite = False
-    custom_domain = f"{settings.NAVER_STORAGE_BUCKET_NAME}.kr.object.ncloudstorage.com"
-
-
-class StaticStorage(S3Boto3Storage):
-    bucket_name = settings.NAVER_STORAGE_BUCKET_NAME
-    location = 'static'
-    default_acl = 'public-read'
-
-"""
-# Add at the end
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

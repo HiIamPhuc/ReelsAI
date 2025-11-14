@@ -40,119 +40,91 @@ class Command(BaseCommand):
                 processor.neo4j_client.clear_database()
                 processor.neo4j_client.create_indexes()
             
-            # # Sample video 1 - Uses "AI" terminology
-            # video1_payload = {
-            #     "user": {
-            #         "user_id": "user_123",
-            #         "name": "Alice Johnson",
-            #         "email": "alice@example.com"
-            #     },
-            #     "video": {
-            #         "video_id": "video_ai_1",
-            #         "title": "Introduction to AI",
-            #         "description": "Basic concepts of AI and machine learning",
-            #         "duration": 1800,
-            #         "upload_date": "2025-01-15T10:00:00Z",
-            #         "url": "https://example.com/video/ai_1"
-            #     },
-            #     "topic": {
-            #         "name": "Artificial Intelligence",
-            #         "description": "AI fundamentals and applications",
-            #         "category": "Technology"
-            #     },
-            #     "source": {
-            #         "name": "TechEd Platform",
-            #         "type": "Educational Platform",
-            #         "url": "https://teched.example.com",
-            #         "description": "Technology education platform"
-            #     },
-            #     "summarization": """
-            #     This video introduces AI (Artificial Intelligence) and its applications. 
-            #     AI is transforming industries through machine learning and deep learning.
-            #     Google is a leading company in AI research, developing tools like TensorFlow.
-            #     AI systems can process natural language and understand human speech.
-            #     Machine learning algorithms learn from data to make predictions.
-            #     Neural networks are a key component of modern AI systems.
-            #     """
-            # }
-            
-            # Sample video 2 - Uses "Artificial Intelligence" terminology
-            # video2_payload = {
-            #     "user": {
-            #         "user_id": "user_456", 
-            #         "name": "Bob Smith",
-            #         "email": "bob@example.com"
-            #     },
-            #     "video": {
-            #         "video_id": "video_ml_2",
-            #         "title": "Advanced Machine Learning",
-            #         "description": "Deep dive into ML algorithms",
-            #         "duration": 2400,
-            #         "upload_date": "2025-01-16T14:00:00Z",
-            #         "url": "https://example.com/video/ml_2"
-            #     },
-            #     "topic": {
-            #         "name": "Machine Learning",
-            #         "description": "Advanced ML techniques and algorithms",
-            #         "category": "Technology"
-            #     },
-            #     "source": {
-            #         "name": "ML Academy",
-            #         "type": "Online Course",
-            #         "url": "https://mlacademy.example.com",
-            #         "description": "Machine learning education platform"
-            #     },
-            #     "summarization": """
-            #     Advanced machine learning covers deep learning and neural networks.
-            #     Artificial Intelligence encompasses various ML techniques and algorithms.
-            #     Google Inc. has developed sophisticated AI frameworks and tools.
-            #     Deep learning uses neural networks with multiple layers for pattern recognition.
-            #     Natural Language Processing enables machines to understand human language.
-            #     ML models require large datasets for training and validation.
-            #     TensorFlow is a popular framework for building machine learning models.
-            #     """
-            # }
-
-            video2_payload = {
+            # Sample video 1 - Uses "AI" terminology
+            video1_payload = {
                 "user": {
-                    "user_id": "demo_user_001",
-                    "name": "Demo User",
-                    "email": "demo@example.com"
+                    "user_id": "user_123",
+                    "name": "Alice Johnson",
+                    "email": "alice@example.com"
                 },
                 "video": {
-                    "video_id": "ai_tutorial_2024",
-                    "title": "Artificial Intelligence Tutorial: From Basics to Advanced",
-                    "description": "Comprehensive AI tutorial covering machine learning, neural networks, and practical applications",
-                    "duration": 3600,
-                    "upload_date": "2024-11-10T10:00:00Z",
-                    "url": "https://example.com/videos/ai_tutorial_2024"
+                    "video_id": "video_ai_1",
+                    "title": "Introduction to AI",
+                    "description": "Basic concepts of AI and machine learning",
+                    "duration": 1800,
+                    "upload_date": "2025-01-15T10:00:00Z",
+                    "url": "https://example.com/video/ai_1"
                 },
                 "topic": {
                     "name": "Artificial Intelligence",
-                    "description": "Introduction to AI concepts and applications",
+                    "description": "AI fundamentals and applications",
                     "category": "Technology"
                 },
                 "source": {
-                    "name": "AI Academy",
+                    "name": "TechEd Platform",
                     "type": "Educational Platform",
-                    "url": "https://aiacademy.example.com",
-                    "description": "Premier online platform for AI education"
+                    "url": "https://teched.example.com",
+                    "description": "Technology education platform"
                 },
-                "summarization": "This comprehensive tutorial introduces Artificial Intelligence and its core concepts.\nThe video begins with Machine Learning fundamentals, explaining how algorithms can learn from data without explicit programming. Key algorithms discussed include Linear Regression for predictive modeling, Decision Trees for classification, and Neural Networks for complex pattern recognition.\n\nDeep Learning is covered as a subset of Machine Learning, focusing on neural networks with multiple layers. Popular frameworks like TensorFlow and PyTorch are demonstrated for building AI models. The instructor, Dr. Sarah Chen, shows practical examples using Python programming language.\n\nReal-world applications are explored, including Natural Language Processing for chatbots, Computer Vision for image recognition, and Autonomous Vehicles for self-driving cars. Companies like Google, Microsoft, and Tesla are mentioned as leaders in AI innovation.\n\nThe tutorial covers ethical considerations in AI, including bias detection and responsible AI development. Data Privacy and Algorithm Transparency are highlighted as crucial factors.\n\nTools and libraries demonstrated include Jupyter Notebooks for development, scikit-learn for traditional ML, and Keras for neural network development. The importance of Data Preprocessing and Feature Engineering is emphasized throughout.    "
+                "summarization": """
+                This video introduces AI (Artificial Intelligence) and its applications. 
+                AI is transforming industries through machine learning and deep learning.
+                Google is a leading company in AI research, developing tools like TensorFlow.
+                AI systems can process natural language and understand human speech.
+                Machine learning algorithms learn from data to make predictions.
+                Neural networks are a key component of modern AI systems.
+                """
             }
             
-            # self.stdout.write('Processing first video (AI terminology)...')
-            # result1 = processor.process_video_summarization(video1_payload)
+            # Sample video 2 - Uses "Artificial Intelligence" terminology
+            video2_payload = {
+                "user": {
+                    "user_id": "user_456", 
+                    "name": "Bob Smith",
+                    "email": "bob@example.com"
+                },
+                "video": {
+                    "video_id": "video_ml_2",
+                    "title": "Advanced Machine Learning",
+                    "description": "Deep dive into ML algorithms",
+                    "duration": 2400,
+                    "upload_date": "2025-01-16T14:00:00Z",
+                    "url": "https://example.com/video/ml_2"
+                },
+                "topic": {
+                    "name": "Machine Learning",
+                    "description": "Advanced ML techniques and algorithms",
+                    "category": "Technology"
+                },
+                "source": {
+                    "name": "ML Academy",
+                    "type": "Online Course",
+                    "url": "https://mlacademy.example.com",
+                    "description": "Machine learning education platform"
+                },
+                "summarization": """
+                Advanced machine learning covers deep learning and neural networks.
+                Artificial Intelligence encompasses various ML techniques and algorithms.
+                Google Inc. has developed sophisticated AI frameworks and tools.
+                Deep learning uses neural networks with multiple layers for pattern recognition.
+                Natural Language Processing enables machines to understand human language.
+                ML models require large datasets for training and validation.
+                TensorFlow is a popular framework for building machine learning models.
+                """
+            }
             
-            # if result1['status'] == 'success':
-            #     self.stdout.write(self.style.SUCCESS(f'✓ Video 1 processed successfully'))
-            #     self.stdout.write(f"  - Entities extracted: {result1['extracted_entities']}")
-            #     self.stdout.write(f"  - Relations extracted: {result1['extracted_relations']}")
-            #     if 'resolution_statistics' in result1:
-            #         self.stdout.write(f"  - Entity resolutions: {result1['resolution_statistics'].get('entity_resolutions_count', 0)}")
-            # else:
-            #     self.stdout.write(self.style.ERROR(f'✗ Video 1 failed: {result1["error_message"]}'))
-            #     return
+            self.stdout.write('Processing first video (AI terminology)...')
+            result1 = processor.process_video_summarization(video1_payload)
+            
+            if result1['status'] == 'success':
+                self.stdout.write(self.style.SUCCESS(f'✓ Video 1 processed successfully'))
+                self.stdout.write(f"  - Entities extracted: {result1['extracted_entities']}")
+                self.stdout.write(f"  - Relations extracted: {result1['extracted_relations']}")
+                if 'resolution_statistics' in result1:
+                    self.stdout.write(f"  - Entity resolutions: {result1['resolution_statistics'].get('entity_resolutions_count', 0)}")
+            else:
+                self.stdout.write(self.style.ERROR(f'✗ Video 1 failed: {result1["error_message"]}'))
+                return
             
             self.stdout.write('Processing second video (Artificial Intelligence terminology)...')
             result2 = processor.process_video_summarization(video2_payload)

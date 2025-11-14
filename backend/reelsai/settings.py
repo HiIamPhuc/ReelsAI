@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "corsheaders",
     "apps.users",
-    "apps.agents.tools.video_analysis",
 ]
 
 MIDDLEWARE = [

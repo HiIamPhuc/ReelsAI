@@ -27,10 +27,6 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("apps.users.urls")),
-    path(
-        "api/agents/video/", include("apps.agents.tools.video_analysis.urls")
-    ),  # Direct to tool
-    # Swagger UI endpoints
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

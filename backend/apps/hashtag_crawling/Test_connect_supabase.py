@@ -17,7 +17,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Lấy tất cả hashtag của Việt Nam với đúng industry_id
 response = (
     supabase
-        .table("HASHTAGS")
+        .table("hashtags")
         .select("*")
         .eq("industry_id", 15000000000)
         .eq("country_id", "VN")   # ⭐ Thêm dòng này

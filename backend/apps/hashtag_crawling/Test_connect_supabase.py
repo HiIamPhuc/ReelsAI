@@ -20,7 +20,7 @@ response = (
         .table("hashtags")
         .select("*")
         .eq("industry_id", 15000000000)
-        .eq("country_id", "VN")   # ⭐ Thêm dòng này
+        .eq("country_id", "VN")   
         .range(0, 999)
         .execute()
 )

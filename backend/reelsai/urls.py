@@ -18,11 +18,13 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from apps.hashtag_crawling.urls import urlpatterns as hashtag_urls
+from apps.video_tiktok.urls import urlpatterns as video_tiktok_urls
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("apps.users.urls")),
     path('api/', include('apps.hashtag_crawling.urls')),
+    path('api/', include('apps.video_tiktok.urls')),
     # Swagger UI endpoints
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

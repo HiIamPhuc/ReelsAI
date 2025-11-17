@@ -48,7 +48,7 @@ class GetTopHashtagsView(APIView):
             uk_hashtags = sorted(uk_hashtags, key=lambda x: x['views'], reverse=True)[:10]
 
             top_hashtags = vietnam_hashtags + us_hashtags + uk_hashtags
-
+            top_hashtags = sorted(top_hashtags, key=lambda x: x['views'], reverse=True)[:20]
             user_id = request.user.id
             for h in top_hashtags:
                 h["user_id"] = user_id

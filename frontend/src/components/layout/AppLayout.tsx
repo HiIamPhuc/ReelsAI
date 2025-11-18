@@ -4,7 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useI18n } from "@/app/i18n";
 import { getProfile } from "@/services/profile";
-// import { me } from "@/services/auth"; // COMMENTED OUT: No longer using auth check
+// import { me } from "@/services/auth"; 
 
 type ProfileLite = {
   name?: string | null;

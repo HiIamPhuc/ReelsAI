@@ -147,8 +147,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       
       notify({ title: "Demo", content: "Local data cleared (no real logout)", tone: "info" });
       
-      // Just refresh the page or stay on app
-      nav("/app", { replace: true });
+      // Just refresh the page or stay on home
+      nav("/", { replace: true });
     } catch (e: any) {
       notify({
         title: t("error"),
@@ -181,7 +181,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const onNewChat = () => {
     sessionStorage.removeItem("activeSessionId");
     setActiveId(null);
-    nav({ pathname: "/app", search: "?new=1" });
+    nav({ pathname: "/chat", search: "?new=1" });
   };
 
   const onSearch = () => setOpenSearch(true);
@@ -189,7 +189,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const onSelect = (id: string) => {
     sessionStorage.setItem("activeSessionId", id);
     setActiveId(id);
-    nav("/app", { state: { sessionId: id } });
+    nav("/chat", { state: { sessionId: id } });
   };
 
   // --- mở modal rename
@@ -275,7 +275,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       if (activeId === deleteTarget) {
         sessionStorage.removeItem("activeSessionId");
         setActiveId(null);
-        nav({ pathname: "/app", search: "?new=1" });
+        nav({ pathname: "/chat", search: "?new=1" });
       }
       setDeleteTarget(null);
       notify({ title: "Success", content: "Session deleted", tone: "success" });
@@ -318,7 +318,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     <Wrap data-collapsed={collapsed ? "true" : "false"} $bg={SIDEBAR_BG}>
       {/* Header */}
       <div className="head">
-        <button className="logo" onClick={go("/app")} aria-label="Home">
+        <button className="logo" onClick={go("/")} aria-label="Home">
           <img src={LOGO} alt="Logo" className="logo-img" />
           <span className="brand-name">ReelsAI</span>
         </button>
@@ -375,6 +375,24 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       {/* Footer */}
       <nav className="footer">
         <NavBtn
+          onClick={go("/")}
+          data-active={pathname === "/" || pathname === "/feed" ? "true" : "false"}
+          title={t("feed")}
+        >
+          <SvgHome className="icon" />
+          <span className="label">{t("feed")}</span>
+        </NavBtn>
+
+        <NavBtn
+          onClick={go("/saved")}
+          data-active={pathname === "/saved" ? "true" : "false"}
+          title={t("contentStorage")}
+        >
+          <SvgBookmark className="icon" />
+          <span className="label">{t("saved")}</span>
+        </NavBtn>
+
+        <NavBtn
           onClick={go("/profile")}
           data-active={pathname.startsWith("/profile") ? "true" : "false"}
           title={t("profile")}
@@ -382,15 +400,6 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           <SvgUser className="icon" />
           <span className="label">{t("profile")}</span>
         </NavBtn>
-
-        {/* <NavBtn
-          onClick={go("/settings")}
-          data-active={pathname.startsWith("/settings") ? "true" : "false"}
-          title={t("settings")}
-        >
-          <SvgSetting className="icon" />
-          <span className="label">{t("settings")}</span>
-        </NavBtn> */}
 
         <NavBtn onClick={handleLogout} title={t("logout")}>
           <SvgLogout className="icon" />
@@ -406,7 +415,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         onChoose={(sid) => {
           sessionStorage.setItem("activeSessionId", sid);
           setActiveId(sid);
-          nav("/app", { state: { sessionId: sid } });
+          nav("/chat", { state: { sessionId: sid } });
         }}
       />
 
@@ -461,7 +470,6 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
         document.body
       )}
 
-      {/* --- MODAL DELETE --- */}
       {/* --- MODAL DELETE --- */}
       {deleteTarget && createPortal(
         <ModalOverlay onClick={() => !busy && setDeleteTarget(null)}>
@@ -1147,6 +1155,19 @@ const ModalActions = styled.div`
 `;
 
 /* SVGs */
+const SvgHome = (p: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const SvgChat = (p: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 const SvgPen = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M12 20h9" strokeWidth="2" />
@@ -1166,6 +1187,12 @@ const SvgUser = (p: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...p}>
     <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Z" strokeWidth="2" />
     <path d="M3 20a9 6 0 0 1 18 0v1H3z" strokeWidth="2" />
+  </svg>
+);
+
+const SvgBookmark = (p: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
   </svg>
 );
 

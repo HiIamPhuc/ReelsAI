@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import SessionItem from "./SessionItem";
+import { useI18n } from "@/app/i18n";
 
 export type Session = { id: string; title: string; active?: boolean };
 
@@ -16,7 +17,8 @@ export default function SessionList({
   onRename,
   onDelete,
 }: Props) {
-  if (!items?.length) return <Empty className="empty">Chưa có phiên nào</Empty>;
+  const { t } = useI18n();
+  if (!items?.length) return <Empty className="empty">{t("noSessions")}</Empty>;
   return (
     <Wrap>
       <div className="list">

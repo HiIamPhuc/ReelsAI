@@ -1,377 +1,348 @@
+"""
+API views for the chatbot application.
+"""
+
+import logging
+import uuid
+from datetime import datetime
+from typing import Dict, Any
+
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.http import JsonResponse
-import json
-import logging
 
-from apps.agents.chatbot.chat_orchestrator import create_chat_orchestrator, ChatOrchestrator
-from apps.agents.kg_constructor.neo4j_client import Neo4jClient
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.openapi import OpenApiTypes
+
+from .models import ChatSession, ChatMessage
+from .serializers import (
+    ChatSessionSerializer, 
+    SendMessageSerializer, 
+    SendMessageResponseSerializer,
+    SessionListSerializer,
+    ChatMessageSerializer
+)
+from ..agents.chatbot.chatbot import Chatbot, ChatRequest
+from ..agents.kg_constructor.neo4j_client import Neo4jClient
 
 logger = logging.getLogger(__name__)
 
-# Global orchestrator instance (can be moved to dependency injection later)
-_orchestrator_instance = None
 
-
-def get_orchestrator(user=None) -> ChatOrchestrator:
-    """Get or create the orchestrator instance with Django user support"""
-    try:
-        # Initialize with Neo4j client if available
-        neo4j_client = Neo4jClient()
-        orchestrator = create_chat_orchestrator(
-            neo4j_client=neo4j_client, 
-            user=user
+@extend_schema(
+    tags=['Chatbot'],
+    summary='Send a message to the chatbot',
+    description='''
+    Send a message to the chatbot and receive an AI response. 
+    If session_id is not provided, a new session will be created.
+    The chatbot uses RAG (Retrieval-Augmented Generation) tools when appropriate.
+    ''',
+    request=SendMessageSerializer,
+    responses={
+        200: SendMessageResponseSerializer,
+        400: 'Bad Request - Invalid input',
+        401: 'Unauthorized - Authentication required',
+        500: 'Internal Server Error'
+    },
+    parameters=[
+        OpenApiParameter(
+            name='session_id',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Optional session ID to continue an existing conversation'
         )
-        logger.info("ChatOrchestrator initialized with Neo4j client")
-        return orchestrator
-    except Exception as e:
-        # Fallback without Neo4j if connection fails
-        orchestrator = create_chat_orchestrator(user=user)
-        logger.warning(f"ChatOrchestrator initialized without Neo4j: {e}")
-        return orchestrator
-
-
+    ]
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def chat_message(request):
+def send_message(request):
     """
-    Process a chat message through the orchestrator
-    
-    POST /api/chat/message/
-    {
-        "message": "Find videos about #machinelearning",
-        "session_id": "optional_session_id"
-    }
+    Send a message to the chatbot and get an AI response.
     """
     try:
-        data = json.loads(request.body) if isinstance(request.body, bytes) else request.data
+        # Validate input
+        serializer = SendMessageSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {'error': 'Invalid input', 'details': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        user_message = data.get('message')
-        session_id = data.get('session_id')
+        user_message = serializer.validated_data['message']
+        session_id = serializer.validated_data.get('session_id')
         
-        if not user_message:
-            return Response({
-                'error': 'Message is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Create or get session
+        if session_id:
+            try:
+                chat_session = ChatSession.objects.get(
+                    session_id=session_id, 
+                    user=request.user
+                )
+            except ChatSession.DoesNotExist:
+                return Response(
+                    {'error': f'Session {session_id} not found for this user'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Create new session
+            session_id = f"session_{request.user.id}_{uuid.uuid4().hex[:8]}"
+            chat_session = ChatSession.objects.create(
+                session_id=session_id,
+                user=request.user,
+                title=user_message[:50] + "..." if len(user_message) > 50 else user_message
+            )
         
-        user_id = str(request.user.id)
-        orchestrator = get_orchestrator(user=request.user)
+        # Initialize chatbot
+        try:
+            neo4j_client = Neo4jClient()
+            chatbot = Chatbot(
+                neo4j_client=neo4j_client,
+                user=request.user
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize chatbot: {e}")
+            return Response(
+                {'error': 'Chatbot service unavailable'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
         
-        # Process the message
-        result = orchestrator.process_user_message(
+        # Create chat request
+        chat_request = ChatRequest(
             user_message=user_message,
-            user_id=user_id,
+            user_id=str(request.user.id),
             session_id=session_id
         )
         
-        return Response(result)
+        # Process message with chatbot
+        with transaction.atomic():
+            # Save user message
+            user_msg = ChatMessage.objects.create(
+                session=chat_session,
+                message_type='human',
+                content=user_message,
+                metadata={'source': 'api'}
+            )
+            
+            # Get chatbot response
+            chat_response = chatbot.process_message(chat_request)
+            
+            if not chat_response.success:
+                # Save error message
+                ai_msg = ChatMessage.objects.create(
+                    session=chat_session,
+                    message_type='ai',
+                    content=chat_response.message,
+                    confidence=chat_response.confidence,
+                    task_type=chat_response.task,
+                    metadata=chat_response.data or {}
+                )
+                
+                return Response(
+                    {
+                        'success': False,
+                        'message': chat_response.message,
+                        'session_id': session_id,
+                        'user_message_id': user_msg.id,
+                        'ai_message_id': ai_msg.id,
+                        'timestamp': chat_response.timestamp
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Save successful AI response
+            ai_msg = ChatMessage.objects.create(
+                session=chat_session,
+                message_type='ai',
+                content=chat_response.message,
+                used_rag_tool=chat_response.data.get('used_rag_tool', False) if chat_response.data else False,
+                tool_calls_made=chat_response.data.get('tool_calls_made', False) if chat_response.data else False,
+                confidence=chat_response.confidence,
+                task_type=chat_response.task,
+                metadata=chat_response.data or {}
+            )
+            
+            # Update session timestamp
+            chat_session.save()
         
-    except json.JSONDecodeError:
-        return Response({
-            'error': 'Invalid JSON format'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        # Prepare response
+        response_data = {
+            'success': chat_response.success,
+            'message': chat_response.message,
+            'session_id': session_id,
+            'data': chat_response.data,
+            'task': chat_response.task,
+            'confidence': chat_response.confidence,
+            'timestamp': chat_response.timestamp,
+            'user_message_id': user_msg.id,
+            'ai_message_id': ai_msg.id
+        }
+        
+        logger.info(f"Successfully processed message for user {request.user.id} in session {session_id}")
+        return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Chat message processing failed: {e}")
-        return Response({
-            'error': 'Internal server error',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error in send_message: {e}")
+        return Response(
+            {'error': 'Internal server error', 'details': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
+@extend_schema(
+    tags=['Chatbot'],
+    summary='Get messages from a chat session',
+    description='''
+    Retrieve all messages from a specific chat session for UI display.
+    Returns messages in chronological order with metadata.
+    ''',
+    responses={
+        200: ChatMessageSerializer(many=True),
+        401: 'Unauthorized - Authentication required',
+        404: 'Session not found'
+    },
+    parameters=[
+        OpenApiParameter(
+            name='session_id',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description='The session ID to retrieve messages from'
+        )
+    ]
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def chat_sessions(request):
+def get_session_messages(request, session_id):
     """
-    Get user's chat sessions
-    
-    GET /api/chat/sessions/
+    Get all messages from a specific chat session.
     """
     try:
-        from .session_manager import PersistentSessionManager
+        # Get session
+        chat_session = get_object_or_404(
+            ChatSession,
+            session_id=session_id,
+            user=request.user
+        )
         
-        limit = int(request.GET.get('limit', 20))
-        sessions = PersistentSessionManager.get_user_session_list(request.user, limit)
+        # Get all messages for this session
+        messages = ChatMessage.objects.filter(
+            session=chat_session
+        ).order_by('timestamp')
         
+        # Serialize messages
+        serializer = ChatMessageSerializer(messages, many=True)
+        
+        logger.info(f"Retrieved {messages.count()} messages for session {session_id}")
         return Response({
-            "success": True,
-            "sessions": sessions,
-            "count": len(sessions)
-        })
+            'session_id': session_id,
+            'message_count': messages.count(),
+            'messages': serializer.data
+        }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Failed to get user sessions: {e}")
-        return Response({
-            'error': 'Failed to retrieve sessions',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error in get_session_messages: {e}")
+        return Response(
+            {'error': 'Internal server error', 'details': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def chat_session_history(request, session_id):
-    """
-    Get conversation history for a specific session
-    
-    GET /api/chat/sessions/{session_id}/history/
-    """
-    try:
-        from .session_manager import PersistentSessionManager
-        
-        # Check if session belongs to the user
-        session_info = PersistentSessionManager.get_session_info(session_id)
-        if not session_info:
-            return Response({
-                'error': 'Session not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        if session_info['user_id'] != request.user.id:
-            return Response({
-                'error': 'Access denied'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        limit = int(request.GET.get('limit', 50))
-        messages = PersistentSessionManager.load_conversation_history(session_id, limit)
-        
-        return Response({
-            "success": True,
-            "session_info": session_info,
-            "messages": messages,
-            "count": len(messages)
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to get session history: {e}")
-        return Response({
-            'error': 'Failed to retrieve session history',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def chat_new_session(request):
-    """
-    Create a new chat session
-    
-    POST /api/chat/sessions/new/
-    """
-    try:
-        from .session_manager import PersistentSessionManager
-        
-        context = request.data.get('context', {})
-        session = PersistentSessionManager.create_new_session(request.user, context)
-        
-        return Response({
-            "success": True,
-            "session_id": session.session_id,
-            "created_at": session.created_at.isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to create new session: {e}")
-        return Response({
-            'error': 'Failed to create session',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+@extend_schema(
+    tags=['Chatbot'],
+    summary='Delete a chat session and its messages',
+    description='''
+    Delete a chat session and all its associated messages.
+    This action is irreversible.
+    ''',
+    responses={
+        200: 'Session deleted successfully',
+        401: 'Unauthorized - Authentication required', 
+        404: 'Session not found'
+    },
+    parameters=[
+        OpenApiParameter(
+            name='session_id',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description='The session ID to delete'
+        )
+    ]
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def chat_archive_session(request, session_id):
+def delete_session(request, session_id):
     """
-    Archive (deactivate) a chat session
-    
-    DELETE /api/chat/sessions/{session_id}/
+    Delete a chat session and all its messages.
     """
     try:
-        from .session_manager import PersistentSessionManager
+        # Get session
+        chat_session = get_object_or_404(
+            ChatSession,
+            session_id=session_id,
+            user=request.user
+        )
         
-        # Check if session belongs to the user
-        session_info = PersistentSessionManager.get_session_info(session_id)
-        if not session_info:
-            return Response({
-                'error': 'Session not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+        # Get message count before deletion
+        message_count = chat_session.messages.count()
         
-        if session_info['user_id'] != request.user.id:
-            return Response({
-                'error': 'Access denied'
-            }, status=status.HTTP_403_FORBIDDEN)
+        # Delete session (messages will be deleted via CASCADE)
+        with transaction.atomic():
+            chat_session.delete()
         
-        PersistentSessionManager.archive_session(session_id)
-        
+        logger.info(f"Deleted session {session_id} with {message_count} messages for user {request.user.id}")
         return Response({
-            "success": True,
-            "message": "Session archived successfully"
-        })
+            'success': True,
+            'message': f'Session {session_id} deleted successfully',
+            'deleted_messages': message_count
+        }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Failed to archive session: {e}")
-        return Response({
-            'error': 'Failed to archive session',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error in delete_session: {e}")
+        return Response(
+            {'error': 'Internal server error', 'details': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
+@extend_schema(
+    tags=['Chatbot'],
+    summary='List all chat sessions for the authenticated user',
+    description='''
+    Get a list of all chat sessions for the authenticated user.
+    Includes session metadata and message previews.
+    ''',
+    responses={
+        200: SessionListSerializer(many=True),
+        401: 'Unauthorized - Authentication required'
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def chat_capabilities(request):
+def list_sessions(request):
     """
-    Get information about chat system capabilities
-    
-    GET /api/chat/capabilities/
-    """
-    capabilities = {
-        "system_name": "ReelsAI Chat Assistant",
-        "version": "1.0.0",
-        "supported_tasks": [
-            {
-                "name": "video_crawling",
-                "description": "Find and crawl videos with hashtags from social platforms",
-                "examples": [
-                    "Find videos about #machinelearning #AI",
-                    "Tìm video về #học_máy",
-                    "Crawl videos with #technology hashtag"
-                ],
-                "status": "placeholder_implementation"
-            },
-            {
-                "name": "knowledge_qa",
-                "description": "Answer questions based on your saved video collection",
-                "examples": [
-                    "What do my videos say about neural networks?",
-                    "Explain machine learning from my saved content",
-                    "Videos của tôi nói gì về AI?"
-                ],
-                "status": "placeholder_implementation"
-            },
-            {
-                "name": "general_chat",
-                "description": "General conversation and system help",
-                "examples": [
-                    "Hello, what can you do?",
-                    "Help me understand the system",
-                    "Xin chào, bạn có thể làm gì?"
-                ],
-                "status": "fully_implemented"
-            }
-        ],
-        "supported_languages": ["English", "Vietnamese"],
-        "features": {
-            "intent_classification": True,
-            "session_management": True,
-            "multilingual_support": True,
-            "knowledge_graph_integration": True,
-            "langgraph_orchestration": True
-        }
-    }
-    
-    return Response(capabilities)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def chat_session_reset(request):
-    """
-    Reset or create a new chat session
-    
-    POST /api/chat/session/reset/
-    {
-        "session_id": "optional_existing_session_id"
-    }
+    Get all chat sessions for the authenticated user.
     """
     try:
-        user_id = str(request.user.id)
-        import time
-        new_session_id = f"session_{user_id}_{int(time.time())}"
+        # Get all sessions for the user
+        sessions = ChatSession.objects.filter(
+            user=request.user
+        ).prefetch_related('messages')
         
+        # Serialize sessions
+        serializer = SessionListSerializer(sessions, many=True)
+        
+        logger.info(f"Retrieved {sessions.count()} sessions for user {request.user.id}")
         return Response({
-            "success": True,
-            "message": "New chat session created",
-            "session_id": new_session_id,
-            "user_id": user_id
-        })
+            'session_count': sessions.count(),
+            'sessions': serializer.data
+        }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f"Session reset failed: {e}")
-        return Response({
-            'error': 'Failed to create new session',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def system_status(request):
-    """
-    Get system status and health check
-    
-    GET /api/chat/status/
-    """
-    try:
-        orchestrator = get_orchestrator()
-        
-        # Test components
-        status_info = {
-            "system": "online",
-            "orchestrator": "initialized",
-            "agents": {
-                "intent_classifier": "ready",
-                "video_crawling_agent": "placeholder",
-                "knowledge_qa_agent": "placeholder", 
-                "general_chat_agent": "ready"
-            },
-            "components": {
-                "langgraph_workflow": "compiled",
-                "llm_connection": "ready"
-            }
-        }
-        
-        # Test Neo4j connection if available
-        try:
-            if hasattr(orchestrator.qa_agent, 'neo4j_client') and orchestrator.qa_agent.neo4j_client:
-                if orchestrator.qa_agent.neo4j_client.test_connection():
-                    status_info["components"]["neo4j"] = "connected"
-                else:
-                    status_info["components"]["neo4j"] = "disconnected"
-            else:
-                status_info["components"]["neo4j"] = "not_configured"
-        except Exception:
-            status_info["components"]["neo4j"] = "error"
-        
-        return Response(status_info)
-        
-    except Exception as e:
-        logger.error(f"Status check failed: {e}")
-        return Response({
-            "system": "error",
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# WebSocket support placeholder (for future real-time chat)
-@csrf_exempt
-def chat_websocket_info(request):
-    """
-    Information about WebSocket endpoints for real-time chat
-    TODO: Implement WebSocket support for real-time conversations
-    """
-    return JsonResponse({
-        "websocket_support": "planned",
-        "current_endpoint": "REST API only",
-        "future_endpoints": {
-            "websocket_url": "/ws/chat/{session_id}/",
-            "features": [
-                "real_time_messaging",
-                "typing_indicators", 
-                "live_video_processing_updates",
-                "streaming_responses"
-            ]
-        },
-        "recommendation": "Use REST API for now, WebSocket coming soon"
-    })
+        logger.error(f"Error in list_sessions: {e}")
+        return Response(
+            {'error': 'Internal server error', 'details': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

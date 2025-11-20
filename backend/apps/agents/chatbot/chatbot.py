@@ -19,7 +19,9 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import tools_condition, ToolNode
-
+from django.contrib.auth.models import User
+            
+from apps.chatbot.models import ChatSession, ChatMessage
 from ..kg_constructor.config import get_openai_llm
 from ..kg_constructor.neo4j_client import Neo4jClient
 from .messages import MessageValidator
@@ -33,10 +35,6 @@ class ChatState(MessagesState):
     """Enhanced state for LangGraph chatbot with tool support"""
     user_id: str = ""
     session_id: str = ""
-    django_user: Optional[User] = None
-    
-    class Config:
-        arbitrary_types_allowed = True
 
 class ChatRequest:
     """Chat request data structure"""
@@ -98,6 +96,11 @@ class Chatbot:
     def _get_checkpointer(self):
         """Get the appropriate checkpointer based on availability"""
         try:
+            # Use MemorySaver for now to avoid PostgresSaver serialization issues
+            # The Django database handles persistence via _save_to_database_node
+            logger.info("Using MemorySaver for LangGraph checkpoints")
+            return MemorySaver()
+            
             # Get database connection string from Django settings
             db_settings = connection.settings_dict
             
@@ -111,7 +114,15 @@ class Chatbot:
             checkpointer = PostgresSaver.from_conn_string(db_url)
             
             # Setup tables if they don't exist
-            checkpointer.setup()
+            # Use with statement to handle setup properly
+            with checkpointer.setup() as setup:
+                if hasattr(setup, '__enter__'):
+                    setup.__enter__()
+                    setup.__exit__(None, None, None)
+                else:
+                    # If setup is not a context manager, try calling it directly
+                    if callable(setup):
+                        setup()
             
             logger.info("Using PostgresSaver for persistent checkpoints")
             return checkpointer
@@ -175,8 +186,8 @@ class Chatbot:
             
             # Use single comprehensive system prompt
             system_message_content = MAIN_SYSTEM_PROMPT.format(
-                user_id=state.user_id,
-                session_id=state.session_id
+                user_id=state.get("user_id", "unknown"),
+                session_id=state.get("session_id", "unknown")
             )
             
             # Check if we already have tool results in recent messages
@@ -213,14 +224,16 @@ class Chatbot:
         This is separate from PostgresSaver which handles LangGraph state persistence.
         """
         try:
-            # Import here to avoid circular imports
-            from apps.chatbot.models import ChatSession, ChatMessage
+            try:
+                user = User.objects.get(id=state.get("user_id"))
+            except User.DoesNotExist:
+                logger.error(f"User with ID {state.get('user_id')} not found")
+                return {"messages": []}
             
-            # Get or create chat session
             session, created = ChatSession.objects.get_or_create(
-                session_id=state.session_id,
+                session_id=state.get("session_id"),
                 defaults={
-                    'user_id': state.user_id,
+                    'user_id': state.get("user_id"),
                     'title': self._generate_session_title(state["messages"])
                 }
             )
@@ -276,8 +289,8 @@ class Chatbot:
             # Update session timestamp
             session.save(update_fields=['updated_at'])
             
-            logger.info(f"Saved {len(new_messages)} messages to database for session {state.session_id}")
-            return {"messages": []}
+            logger.info(f"Saved {len(new_messages)} messages to database for session {state.get('session_id')}")
+            return {"messages": new_messages}
             
         except Exception as e:
             logger.error(f"Failed to save messages to database: {e}")
@@ -332,7 +345,6 @@ class Chatbot:
                 "messages": [HumanMessage(content=request.user_message)],
                 "user_id": request.user_id,
                 "session_id": session_id,
-                "django_user": self.user,
             }
             
             # Process through workflow

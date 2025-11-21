@@ -1,8 +1,10 @@
 import styled from "styled-components";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { useI18n } from "@/app/i18n";
 import Button from "@/components/common/buttons/Button";
+import PwField from "@/components/common/inputs/PwField";
 import { useAuth } from "@/hooks/useAuth";
 
 // ảnh trong /public
@@ -17,17 +19,19 @@ export default function ResetPassword() {
   useI18n();
   const { uidb64, token } = useParams<{ uidb64: string; token: string }>();
   const { resetPassword, isResettingPassword } = useAuth();
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const {
-    register,
     handleSubmit,
-    watch,
+    setValue,
     formState: { errors },
   } = useForm<ResetPasswordFormData>();
 
-  const password = watch("password");
-
   const onSubmit = (data: ResetPasswordFormData) => {
     if (!uidb64 || !token) {
+      return;
+    }
+    if (password !== password2) {
       return;
     }
     resetPassword({
@@ -51,18 +55,16 @@ export default function ResetPassword() {
 
           <form className="form" onSubmit={handleSubmit(onSubmit)}>
             <div className="input-box">
-              <label>New Password</label>
-              <input
-                type="password"
+              <PwField
+                label="New Password"
+                value={password}
+                onChange={(v) => {
+                  setPassword(v);
+                  setValue("password", v, { shouldValidate: true });
+                }}
                 placeholder="Enter new password"
                 autoComplete="new-password"
-                {...register("password", {
-                  required: "Password is required",
-                  minLength: {
-                    value: 8,
-                    message: "Password must be at least 8 characters",
-                  },
-                })}
+                disabled={isResettingPassword}
               />
               {errors.password && (
                 <span className="error">{errors.password.message}</span>
@@ -70,19 +72,19 @@ export default function ResetPassword() {
             </div>
 
             <div className="input-box">
-              <label>Confirm New Password</label>
-              <input
-                type="password"
+              <PwField
+                label="Confirm New Password"
+                value={password2}
+                onChange={(v) => {
+                  setPassword2(v);
+                  setValue("password2", v, { shouldValidate: true });
+                }}
                 placeholder="Confirm new password"
                 autoComplete="new-password"
-                {...register("password2", {
-                  required: "Please confirm your password",
-                  validate: (value) =>
-                    value === password || "Passwords do not match",
-                })}
+                disabled={isResettingPassword}
               />
-              {errors.password2 && (
-                <span className="error">{errors.password2.message}</span>
+              {password2 && password !== password2 && (
+                <span className="error">Passwords do not match</span>
               )}
             </div>
 

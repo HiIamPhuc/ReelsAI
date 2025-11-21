@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import { useI18n } from "@/app/i18n";
 import Button from "@/components/common/buttons/Button";
+import PwField from "@/components/common/inputs/PwField";
 import type { RegisterRequest } from "@/types/auth";
 
 type Props = {
@@ -16,17 +17,20 @@ type SignupFormData = RegisterRequest & {
 
 const SignupForm: React.FC<Props> = ({ onSubmit, loading }) => {
   const { t } = useI18n();
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const {
     register,
     handleSubmit,
-    watch,
+    setValue,
     formState: { errors },
   } = useForm<SignupFormData>();
 
-  const password = watch("password");
-
   const handleFormSubmit = (data: SignupFormData) => {
-    const { password2, ...registerData } = data;
+    if (password !== password2) {
+      return;
+    }
+    const { password2: _, ...registerData } = data;
     onSubmit(registerData);
   };
 
@@ -74,18 +78,16 @@ const SignupForm: React.FC<Props> = ({ onSubmit, loading }) => {
 
           <div className="column">
             <div className="input-box">
-              <label>Password</label>
-              <input
-                type="password"
-                placeholder="Your password"
+              <PwField
+                label="Password"
+                value={password}
+                onChange={(v) => {
+                  setPassword(v);
+                  setValue("password", v, { shouldValidate: true });
+                }}
+                placeholder="Password"
                 autoComplete="new-password"
-                {...register("password", {
-                  required: "Password is required",
-                  minLength: {
-                    value: 8,
-                    message: "Password must be at least 8 characters",
-                  },
-                })}
+                disabled={loading}
               />
               {errors.password && (
                 <span className="error">{errors.password.message}</span>
@@ -93,19 +95,19 @@ const SignupForm: React.FC<Props> = ({ onSubmit, loading }) => {
             </div>
 
             <div className="input-box">
-              <label>Confirm Password</label>
-              <input
-                type="password"
-                placeholder="Confirm password"
+              <PwField
+                label="Confirm Password"
+                value={password2}
+                onChange={(v) => {
+                  setPassword2(v);
+                  setValue("password2", v, { shouldValidate: true });
+                }}
+                placeholder="Confirm"
                 autoComplete="new-password"
-                {...register("password2", {
-                  required: "Please confirm your password",
-                  validate: (value) =>
-                    value === password || "Passwords do not match",
-                })}
+                disabled={loading}
               />
-              {errors.password2 && (
-                <span className="error">{errors.password2.message}</span>
+              {password2 && password !== password2 && (
+                <span className="error">Passwords do not match</span>
               )}
             </div>
           </div>

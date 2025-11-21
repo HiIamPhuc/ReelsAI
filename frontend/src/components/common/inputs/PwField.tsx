@@ -74,13 +74,15 @@ const Wrap = styled.div`
 
   .password {
     position: relative;
+    display: flex;
+    align-items: center;
   }
 
   input {
     height: 38px;
     width: 100%;
     margin-top: 6px;
-    padding: 0 40px 0 12px; /* chừa chỗ cho nút ẩn/hiện pass */
+    padding: 0 48px 0 12px !important;
     border: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 10px;
     background: #fff;
@@ -105,18 +107,20 @@ const Wrap = styled.div`
 
   .toggle {
     position: absolute;
-    right: 8px;
-    top: 50%;
+    right: 6px;
+    top: calc(50% + 3px);
     transform: translateY(-50%);
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     border: none;
     background: transparent;
     cursor: pointer;
     color: ${({ theme }) => theme.colors.secondary};
     border-radius: 8px;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
   .toggle:hover {
     color: ${({ theme }) => theme.colors.accent};

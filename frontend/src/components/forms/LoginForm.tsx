@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import { useI18n } from "@/app/i18n";
 import Button from "@/components/common/buttons/Button";
+import PwField from "@/components/common/inputs/PwField";
 import type { SignInRequest } from "@/types/auth";
 
 type Props = {
@@ -12,11 +13,18 @@ type Props = {
 
 const LoginForm: React.FC<Props> = ({ onSubmit, loading }) => {
   const { t } = useI18n();
+  const [password, setPassword] = useState("");
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
-  } = useForm<SignInRequest>();
+  } = useForm<SignInRequest>({
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
 
   return (
     <StyledWrapper>
@@ -39,18 +47,16 @@ const LoginForm: React.FC<Props> = ({ onSubmit, loading }) => {
           </div>
 
           <div className="input-box">
-            <label>Password</label>
-            <input
-              type="password"
+            <PwField
+              label="Password"
+              value={password}
+              onChange={(v) => {
+                setPassword(v);
+                setValue("password", v, { shouldValidate: true });
+              }}
               placeholder="Your password"
               autoComplete="current-password"
-              {...register("password", {
-                required: "Password is required",
-                minLength: {
-                  value: 8,
-                  message: "Password must be at least 8 characters",
-                },
-              })}
+              disabled={loading}
             />
             {errors.password && (
               <span className="error">{errors.password.message}</span>

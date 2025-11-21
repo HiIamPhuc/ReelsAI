@@ -26,5 +26,5 @@ urlpatterns = [
     path('api/', include('apps.hashtag_crawling.urls')),
     path('api/', include('apps.video_tiktok.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    # path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

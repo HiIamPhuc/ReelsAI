@@ -1,28 +1,33 @@
-import React, { useState } from "react";
+import React from "react";
 import styled from "styled-components";
+import { useForm } from "react-hook-form";
 import { useI18n } from "@/app/i18n";
 import Button from "@/components/common/buttons/Button";
-import PwField from "@/components/common/inputs/PwField";
+import type { RegisterRequest } from "@/types/auth";
 
 type Props = {
-  onSubmit: (p: { email: string; password: string; username: string }) => void;
+  onSubmit: (data: RegisterRequest) => void;
   loading?: boolean;
+};
+
+type SignupFormData = RegisterRequest & {
+  password2: string;
 };
 
 const SignupForm: React.FC<Props> = ({ onSubmit, loading }) => {
   const { t } = useI18n();
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
-  const [name, setName] = useState("");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<SignupFormData>();
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pw !== pw2) {
-      alert(`${t("error")}: ${t("confirmPassword")}`);
-      return;
-    }
-    onSubmit({ email: email.trim(), password: pw, username: name.trim() });
+  const password = watch("password");
+
+  const handleFormSubmit = (data: SignupFormData) => {
+    const { password2, ...registerData } = data;
+    onSubmit(registerData);
   };
 
   return (
@@ -30,47 +35,83 @@ const SignupForm: React.FC<Props> = ({ onSubmit, loading }) => {
       <section className="container">
         <header>{t("signup")}</header>
 
-        <form className="form" onSubmit={submit}>
+        <form className="form" onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="input-box">
             <label>Username</label>
             <input
-              required
+              type="text"
               placeholder="Your username"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("username", {
+                required: "Username is required",
+                minLength: {
+                  value: 3,
+                  message: "Username must be at least 3 characters",
+                },
+              })}
             />
+            {errors.username && (
+              <span className="error">{errors.username.message}</span>
+            )}
           </div>
 
           <div className="input-box">
             <label>Email</label>
             <input
-              required
               type="email"
               placeholder="Your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email", {
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address",
+                },
+              })}
             />
+            {errors.email && (
+              <span className="error">{errors.email.message}</span>
+            )}
           </div>
 
           <div className="column">
-            <PwField
-              label="Password"
-              value={pw}
-              onChange={setPw}
-              autoComplete="new-password"
-              required
-            />
-            <PwField
-              label="Confirm Password"
-              value={pw2}
-              onChange={setPw2}
-              autoComplete="new-password"
-              required
-            />
+            <div className="input-box">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Your password"
+                autoComplete="new-password"
+                {...register("password", {
+                  required: "Password is required",
+                  minLength: {
+                    value: 8,
+                    message: "Password must be at least 8 characters",
+                  },
+                })}
+              />
+              {errors.password && (
+                <span className="error">{errors.password.message}</span>
+              )}
+            </div>
+
+            <div className="input-box">
+              <label>Confirm Password</label>
+              <input
+                type="password"
+                placeholder="Confirm password"
+                autoComplete="new-password"
+                {...register("password2", {
+                  required: "Please confirm your password",
+                  validate: (value) =>
+                    value === password || "Passwords do not match",
+                })}
+              />
+              {errors.password2 && (
+                <span className="error">{errors.password2.message}</span>
+              )}
+            </div>
           </div>
 
-          <Button type="submit" wfull size="md" disabled={!!loading}>
-            {loading ? t("creating") : t("createAccount")}
+          <Button type="submit" wfull size="md" loading={loading} disabled={loading}>
+            {t("createAccount")}
           </Button>
         </form>
       </section>
@@ -139,6 +180,13 @@ const StyledWrapper = styled.div`
   .input-box input:focus {
     border-color: ${({ theme }) => theme.colors.accent};
     box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+  }
+
+  .error {
+    display: block;
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 4px;
   }
 
   .form .column {

@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/app/toast';
 import * as profileService from '@/services/profileService';
+import { authService } from '@/services/authService';
+import { clearTokens } from '@/lib/axios';
 import type { UpdateProfileRequest, ChangePasswordRequest } from '@/services/profileService';
 
 export const useProfile = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { notify } = useToast();
 
   // Update profile mutation
@@ -27,7 +27,22 @@ export const useProfile = () => {
   const changePasswordMutation = useMutation({
     mutationFn: (data: ChangePasswordRequest) => profileService.changePassword(data),
     onSuccess: () => {
-      notify({ title: 'Password updated successfully', tone: 'success' });
+      notify({ title: 'Password changed successfully. Logging out...', tone: 'success' });
+      
+      // Logout after 1 second
+      setTimeout(async () => {
+        try {
+          await authService.logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          // Always clear cache and tokens
+          queryClient.clear();
+          clearTokens();
+          // Use window.location for hard redirect to clear all state
+          window.location.href = '/auth/sign-in';
+        }
+      }, 1000);
     },
     onError: (error: any) => {
       const message = error.response?.data?.error || error.message || 'Failed to change password';

@@ -71,8 +71,8 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    // Show errors longer (10s), others 6s
-    const duration = tone === "error" ? 10000 : 6000;
+    // Show errors longer (3s), others 2s
+    const duration = tone === "error" ? 3000 : 2000;
     const t = setTimeout(() => {
       setLeaving(true);
       setTimeout(onDismiss, 320);

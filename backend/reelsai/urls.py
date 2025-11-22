@@ -34,4 +34,6 @@ urlpatterns = [
     ),
     path("api/", include("apps.feed.urls")),
     path("api/chatbot/", include("apps.chatbot.urls")),
+    path("api/", include("apps.saved_items.urls")),  # API /save
+    path("api/rag/", include("apps.rag.urls")),
 ]

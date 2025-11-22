@@ -101,7 +101,7 @@ WSGI_APPLICATION = "reelsai.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "reelsai"),
         "USER": os.getenv("DB_USER", "reelsai"),
         "PASSWORD": os.getenv("DB_PASSWORD", "reelsai"),
@@ -251,3 +251,7 @@ SERVICE_URLS = {
     "VIDEO_UNDERSTANDING_API_URL": os.getenv("VIDEO_UNDERSTANDING_API_URL"),
     "RAG_API_URL": os.getenv("RAG_API_URL"),
 }
+
+DJANGO_SUPERUSER_USERNAME = os.getenv("DJANGO_SUPERUSER_USERNAME", "admin")
+DJANGO_SUPERUSER_EMAIL = os.getenv("DJANGO_SUPERUSER_EMAIL", "admin@example.com")
+DJANGO_SUPERUSER_PASSWORD = os.getenv("DJANGO_SUPERUSER_PASSWORD", "adminpass")

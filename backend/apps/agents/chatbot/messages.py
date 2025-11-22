@@ -1,3 +1,8 @@
+from datetime import datetime, timedelta
+from logging import getLogger
+
+logger = getLogger(__name__)
+
 class MessageValidator:
     """Utility class for validating messages and inputs"""
     
@@ -49,3 +54,94 @@ class MessageTypes:
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+
+class Keywords:
+    """Common keywords for parsing user queries"""
+
+    # Platform keywords
+    platform = {
+        "facebook": ["facebook", "fb", "meta"],
+        # "instagram": ["instagram", "insta"],
+        "tiktok": ["tiktok", "tt", "tik tok"],
+        # "youtube": ["youtube", "yt"],
+        # "twitter": ["twitter", "tweet", "x"],
+    }
+
+    # Time filter keywords for both English and Vietnamese
+    time_filters = {
+        "recent": { 
+            "keywords":["recent", "latest", "new", "today", "yesterday", "gần đây", "mới nhất", "hôm nay", "hôm qua"],
+            "days": 30 
+            },
+        "this_week": { 
+            "keywords":["this week", "last week", "tuần này", "tuần trước"],
+            "days": 7 
+            },
+    }
+
+    # Keywords for increasing search scope
+    broad_search = ["all", "everything", "summary", "overview", "tất cả", "toàn bộ", "tóm tắt", "khái quát"]
+
+    @staticmethod
+    def filter_keywords():
+        """Flattened list of all filter keywords"""
+        keywords = []
+        for kw_list in Keywords.platform.values():
+            keywords.extend(kw_list)
+        for kw_list in Keywords.time_filters.values():
+            keywords.extend(kw_list)
+        return keywords
+    
+    @staticmethod
+    def platform_keywords():
+        """Flattened list of platform keywords"""
+        keywords = []
+        for kw_list in Keywords.platform.values():
+            keywords.extend(kw_list)
+        return keywords
+    
+    @staticmethod
+    def time_filter_keywords():
+        """Flattened list of time filter keywords"""
+        keywords = []
+        for kw_list in Keywords.time_filters.values():
+            keywords.extend(kw_list)
+        return keywords
+    
+    @staticmethod
+    def filter_platform(query: str) -> list[str]:
+        """List of platforms mentioned in the query"""
+        platforms = []
+        query_lower = query.lower()
+        for platform, kw_list in Keywords.platform.items():
+            if any(kw in query_lower for kw in kw_list):
+                platforms.append(platform)
+        return platforms
+    
+    @staticmethod
+    def filter_time(query: str) -> int:
+        """List of time filters mentioned in the query"""
+
+        # Filter out times
+        times = []
+        query_lower = query.lower()
+        for time_filter, kw_list in Keywords.time_filters.items():
+            if any(kw in query_lower for kw in kw_list):
+                times.append(time_filter)
+
+        # Return days corresponding to the first matched time filter
+        days = 30  # Default to 30 days
+        if times:
+            if len(times) > 1:
+                logger.info(f"Multiple time filters found in query: {times}. Query in the last 30 days will be used.")
+                days = Keywords.time_filters['recent']["days"]
+            else:
+                days = Keywords.time_filters[times[0]]["days"]
+        
+        return int((datetime.now() - timedelta(days=days)).timestamp())
+    
+    @staticmethod
+    def is_broad_search(query: str) -> bool:
+        """Check if the query indicates a broad search"""
+        query_lower = query.lower()
+        return any(word in query_lower for word in Keywords.broad_search)

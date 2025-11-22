@@ -227,7 +227,7 @@ python manage.py runserver 0.0.0.0:8000
 
 ```bash
 cd backend
-python apps/saved_items/worker_video.py
+python manage.py run_video_worker --rabbitmq-host localhost --rabbitmq-port 5672
 ```
 
 **Logs:** Worker listens to RabbitMQ queue and processes video jobs

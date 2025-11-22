@@ -103,7 +103,9 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "reelsai"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
-        # "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")}
+        "OPTIONS": {
+            "sslmode": os.getenv("DB_SSLMODE", "require"),
+        },
     }
 }
 
@@ -226,3 +228,13 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "user_saved_items_embeddings")
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+# RabbitMQ Configuration
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
+RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
+
+# Service API URLs
+SERVICE_API_URLS = {
+    "VIDEO_UNDERSTANDING_API_URL": os.getenv("VIDEO_UNDERSTANDING_API_URL"),
+    "RAG_API_URL": os.getenv("RAG_API_URL"),
+}

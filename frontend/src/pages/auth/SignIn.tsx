@@ -11,7 +11,6 @@ export default function SignIn() {
   const { t } = useI18n();
 
   const handleSubmit = (data: SignInRequest) => {
-    console.log('SignIn handleSubmit called with:', data);
     signIn(data);
   };
 

@@ -211,6 +211,6 @@ media/
 /home/aaronpham/Coding/ReelsAI/bluesky/temp_data
 
 # Elastic Beanstalk Files
-.elasticbeanstalk/*
+*/.elasticbeanstalk/
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml

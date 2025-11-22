@@ -1,23 +1,33 @@
 from typing import List, Dict, Any, Optional
 import logging
 
-# load embedding model once
-from sentence_transformers import SentenceTransformer
-
 logger = logging.getLogger(__name__)
 
-try:
-    model = SentenceTransformer("keepitreal/vietnamese-sbert")
-except Exception as e:
-    logger.exception("Failed to load SentenceTransformer model: %s", e)
-    model = None
+# Lazy load to avoid loading model on import
+_model = None
+_collection = None
 
-# import collection; path assumes project root has rag/milvus_setup.py
-try:
-    from .milvus_setup import collection
-except Exception as e:
-    logger.exception("Failed to import milvus collection: %s", e)
-    collection = None
+def get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        try:
+            _model = SentenceTransformer("keepitreal/vietnamese-sbert")
+        except Exception as e:
+            logger.exception("Failed to load SentenceTransformer model: %s", e)
+            _model = None
+    return _model
+
+def get_collection():
+    global _collection
+    if _collection is None:
+        try:
+            from .milvus_setup import collection
+            _collection = collection
+        except Exception as e:
+            logger.exception("Failed to import milvus collection: %s", e)
+            _collection = None
+    return _collection
 
 
 def _build_columns_for_insert(data_map: Dict[str, Any]) -> List[List[Any]]:
@@ -25,6 +35,7 @@ def _build_columns_for_insert(data_map: Dict[str, Any]) -> List[List[Any]]:
     Build column-wise payload according to collection.schema order,
     skipping auto id if present.
     """
+    collection = get_collection()
     if collection is None:
         raise RuntimeError("Milvus collection is not available")
 
@@ -52,6 +63,8 @@ def insert_item(
     summary: str,
     timestamp: Optional[int] = None,
 ):
+    model = get_model()
+    collection = get_collection()
     if collection is None or model is None:
         raise RuntimeError("Dependencies missing: model or collection")
 
@@ -83,6 +96,8 @@ def query_items(
     from_timestamp: Optional[int] = None,
     platform: Optional[str] = None,
 ) -> Dict[str, Any]:
+    model = get_model()
+    collection = get_collection()
     if collection is None or model is None:
         raise RuntimeError("Dependencies missing: model or collection")
 

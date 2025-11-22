@@ -101,7 +101,7 @@ WSGI_APPLICATION = "reelsai.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "reelsai"),
         "USER": os.getenv("DB_USER", "reelsai"),
         "PASSWORD": os.getenv("DB_PASSWORD", "reelsai"),
@@ -109,6 +109,7 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
         "OPTIONS": {
             "sslmode": os.getenv("DB_SSLMODE", "require"),
+            "connect_timeout": 10,
         },
     }
 }
@@ -162,8 +163,8 @@ SIMPLE_JWT = {
 CORS_ALLOW_CREDENTIALS = True
 
 # Comma-separated list of exact origins
-_cors_origins = [o for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o]
-CORS_ALLOWED_ORIGINS = _cors_origins
+_cors_origins = [o for o in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",") if o]
+CORS_ALLOWED_ORIGINS = _cors_origins if _cors_origins else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 # Allow common preview domains
 CORS_ALLOWED_ORIGIN_REGEXES = [

@@ -1,6 +1,7 @@
 import pika
 import json
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ def publish_video_job(user_id: int, content_id: int):
     """
     try:
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters("localhost", heartbeat=600)
+            pika.ConnectionParameters(settings.RABBITMQ_HOST, settings.RABBITMQ_PORT, heartbeat=600)
         )
         channel = connection.channel()
 

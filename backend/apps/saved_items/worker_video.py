@@ -5,15 +5,16 @@ from supabase import create_client
 from dotenv import load_dotenv
 import os
 import time
+from django.conf import settings
 
 load_dotenv()
 
-VIDEO_UNDERSTANDING_URL = "http://localhost:8000/api/video-analysis/summarize"
-RAG_URL = "http://localhost:8000/api/rag/add-item"
+VIDEO_UNDERSTANDING_API_URL = settings.SERVICE_URLS["VIDEO_UNDERSTANDING_API_URL"]
+RAG_API_URL = settings.SERVICE_URLS["RAG_API_URL"]
 
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+SUPABASE_URL = settings.SUPABASE_URL
+SUPABASE_KEY = settings.SUPABASE_KEY
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -48,7 +49,7 @@ def process_job(user_id: int, content_id: int):
                     f"🔍 Calling video summarizer (attempt {attempt + 1}/{max_retries})..."
                 )
                 summary_resp = requests.post(
-                    VIDEO_UNDERSTANDING_URL, json={"video_url": media_url}, timeout=120
+                    VIDEO_UNDERSTANDING_API_URL, json={"video_url": media_url}, timeout=120
                 )
 
                 if summary_resp.status_code == 503:
@@ -84,9 +85,9 @@ def process_job(user_id: int, content_id: int):
 
         # Step 3: Send to RAG
         try:
-            print(f"🔍 Sending to RAG: {RAG_URL}")
+            print(f"🔍 Sending to RAG: {RAG_API_URL}")
             rag_resp = requests.put(
-                RAG_URL,
+                RAG_API_URL,
                 json={
                     "content_id": str(content_id),
                     "user_id": str(user_id),
@@ -120,7 +121,7 @@ def process_job(user_id: int, content_id: int):
 def main():
     """RabbitMQ consumer - listens for video processing jobs"""
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters("localhost", heartbeat=600)
+        pika.ConnectionParameters(settings.RABBITMQ_HOST, settings.RABBITMQ_PORT, heartbeat=600)
     )
     channel = connection.channel()
     channel.queue_declare(queue="video_processing", durable=True)

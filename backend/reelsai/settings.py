@@ -48,10 +48,14 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "corsheaders",
     "apps.users",
+    "apps.hashtag_crawling",
+    "django_extensions",
     "apps.graph",
     "apps.agents",
     "apps.chatbot",
     "apps.saved_items",
+    "apps.feed",
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -228,6 +232,9 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "user_saved_items_embeddings")
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+BSKY_USERNAME = os.environ.get("BSKY_USERNAME")
+BSKY_PASSWORD = os.environ.get("BSKY_PASSWORD")
 
 # RabbitMQ Configuration
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")

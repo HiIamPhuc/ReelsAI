@@ -7,22 +7,26 @@ logger = logging.getLogger(__name__)
 _model = None
 _collection = None
 
+
 def get_model():
     global _model
     if _model is None:
         from sentence_transformers import SentenceTransformer
+
         try:
-            _model = SentenceTransformer("keepitreal/vietnamese-sbert")
+            _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
         except Exception as e:
             logger.exception("Failed to load SentenceTransformer model: %s", e)
             _model = None
     return _model
+
 
 def get_collection():
     global _collection
     if _collection is None:
         try:
             from .milvus_setup import collection
+
             _collection = collection
         except Exception as e:
             logger.exception("Failed to import milvus collection: %s", e)

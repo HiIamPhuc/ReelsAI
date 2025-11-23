@@ -101,7 +101,7 @@ WSGI_APPLICATION = "reelsai.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "reelsai"),
         "USER": os.getenv("DB_USER", "reelsai"),
         "PASSWORD": os.getenv("DB_PASSWORD", "reelsai"),
@@ -109,6 +109,7 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
         "OPTIONS": {
             "sslmode": os.getenv("DB_SSLMODE", "require"),
+            "connect_timeout": 10,
         },
     }
 }
@@ -162,8 +163,8 @@ SIMPLE_JWT = {
 CORS_ALLOW_CREDENTIALS = True
 
 # Comma-separated list of exact origins
-_cors_origins = [o for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o]
-CORS_ALLOWED_ORIGINS = _cors_origins
+_cors_origins = [o for o in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",") if o]
+CORS_ALLOWED_ORIGINS = _cors_origins if _cors_origins else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 # Allow common preview domains
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -246,8 +247,28 @@ BSKY_PASSWORD = os.environ.get("BSKY_PASSWORD")
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
 
+# Celery Configuration
+# Use Redis as broker and result backend (preferred for Render)
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Parse Redis URL for Celery
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50  # Prevent memory leaks
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
 # Service API URLs
 SERVICE_URLS = {
     "VIDEO_UNDERSTANDING_API_URL": os.getenv("VIDEO_UNDERSTANDING_API_URL"),
     "RAG_API_URL": os.getenv("RAG_API_URL"),
 }
+
+DJANGO_SUPERUSER_USERNAME = os.getenv("DJANGO_SUPERUSER_USERNAME", "admin")
+DJANGO_SUPERUSER_EMAIL = os.getenv("DJANGO_SUPERUSER_EMAIL", "admin@example.com")
+DJANGO_SUPERUSER_PASSWORD = os.getenv("DJANGO_SUPERUSER_PASSWORD", "adminpass")
